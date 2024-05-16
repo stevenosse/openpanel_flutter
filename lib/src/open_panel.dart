@@ -12,8 +12,11 @@ import 'package:openpanel_flutter/src/models/open_panel_state.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/tracked_device_data.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
-import 'package:openpanel_flutter/src/network/openpanel_http_client.dart';
+import 'package:openpanel_flutter/src/services/openpanel_http_client.dart';
+import 'package:openpanel_flutter/src/services/preferences_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 // TODO: Setup logger
 class Openpanel {
@@ -26,6 +29,7 @@ class Openpanel {
   Openpanel._internal();
 
   late final OpenpanelOptions options;
+  late final PreferencesService _preferencesService;
 
   late final OpenpanelHttpClient _httpClient;
 
@@ -36,10 +40,20 @@ class Openpanel {
   Future<void> initialize({required OpenpanelOptions options}) async {
     this.options = options;
 
-    // TODO: Store state properties locally
-    final deviceData = await getTrackedDeviceData();
-    if (deviceData != null) {
-      setGlobalProperties(deviceData.toJson());
+    _preferencesService = PreferencesService(await SharedPreferences.getInstance());
+
+    final OpenpanelState? savedState = await _preferencesService.getSavedState();
+
+    if (savedState != null) {
+      state = savedState;
+    } else {
+      final deviceData = await getTrackedDeviceData();
+      if (deviceData != null) {
+        setGlobalProperties(deviceData.toJson());
+        state = state.copyWith(profileId: const Uuid().v4());
+      }
+
+      _preferencesService.persistState(state);
     }
 
     // HTTP CLient
@@ -84,11 +98,7 @@ class Openpanel {
         return;
       }
 
-      _httpClient.increment(
-        profileId: profileId,
-        property: property,
-        value: value,
-      );
+      _httpClient.increment(profileId: profileId, property: property, value: value);
     });
   }
 
@@ -129,9 +139,11 @@ class Openpanel {
   }
 
   void setGlobalProperties(Map<String, dynamic> properties) {
-    state = state.copyWith(properties: {
-      ...state.properties,
-      ...properties,
+    _execute(() {
+      state = state.copyWith(properties: {
+        ...state.properties,
+        ...properties,
+      });
     });
   }
 
@@ -149,6 +161,8 @@ class Openpanel {
     }
 
     action();
+
+    _preferencesService.persistState(state);
   }
 
   Future<TrackedDeviceData?> getTrackedDeviceData() async {

@@ -10,7 +10,6 @@ import 'package:openpanel_flutter/src/models/open_panel_event_options.dart';
 import 'package:openpanel_flutter/src/models/open_panel_options.dart';
 import 'package:openpanel_flutter/src/models/open_panel_state.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
-import 'package:openpanel_flutter/src/models/tracked_device_data.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
 import 'package:openpanel_flutter/src/services/openpanel_http_client.dart';
 import 'package:openpanel_flutter/src/services/preferences_service.dart';
@@ -38,24 +37,28 @@ class Openpanel {
   OpenpanelState state = const OpenpanelState();
 
   Future<void> initialize({required OpenpanelOptions options}) async {
+    if (_isClientInitialised) {
+      return;
+    }
     this.options = options;
 
     _preferencesService = PreferencesService(await SharedPreferences.getInstance());
 
     final OpenpanelState? savedState = await _preferencesService.getSavedState();
-
     if (savedState != null) {
       state = savedState;
     } else {
       final deviceData = await getTrackedDeviceData();
-      if (deviceData != null) {
-        setGlobalProperties(deviceData.toJson());
-        state = state.copyWith(profileId: const Uuid().v4());
+      if (deviceData.isNotEmpty) {
+        setGlobalProperties(deviceData);
+        state = state.copyWith(
+          profileId: const Uuid().v4(),
+          deviceId: deviceData['deviceId'] ?? const Uuid().v4(),
+        );
       }
 
       _preferencesService.persistState(state);
     }
-
     // HTTP CLient
     final dio = Dio(
       BaseOptions(
@@ -68,10 +71,14 @@ class Openpanel {
       ),
     );
     dio.interceptors.add(RetryInterceptor(dio: dio));
-    _httpClient = OpenpanelHttpClient(
-      dio: dio,
-      verbose: options.verbose,
-    );
+    if (options.verbose) {
+      dio.interceptors.add(LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+      ));
+    }
+
+    _httpClient = OpenpanelHttpClient(dio: dio);
 
     _isClientInitialised = true;
   }
@@ -122,38 +129,36 @@ class Openpanel {
     _execute(() async {
       final profileId = properties['profileId'] ?? state.profileId;
 
-      final deviceId = await _httpClient.event(
+      _httpClient.event(
         payload: PostEventPayload(
           name: name,
           timestamp: DateTime.timestamp().toIso8601String(),
           deviceId: state.deviceId,
-          properties: properties..remove('profileId'),
+          properties: {
+            ...state.properties,
+            ...properties..remove('profileId'),
+          },
           profileId: profileId,
         ),
       );
-
-      if (deviceId != null) {
-        state = state.copyWith(deviceId: deviceId);
-      }
     });
   }
 
   void setGlobalProperties(Map<String, dynamic> properties) {
-    _execute(() {
-      state = state.copyWith(properties: {
-        ...state.properties,
-        ...properties,
-      });
+    state = state.copyWith(properties: {
+      ...state.properties,
+      ...properties,
     });
   }
 
   void clear() {
     state = const OpenpanelState();
+    _preferencesService.persistState(state);
   }
 
   void _execute<T>(T Function() action) {
     if (!_isClientInitialised) {
-      throw Exception('You need to call Openpanel.init(...) first.');
+      throw Exception('Openpanel is not initialised. You must initialize Openpanel before using Openpanel.instance.');
     }
 
     if (!state.isCollectionEnabled) {
@@ -165,35 +170,37 @@ class Openpanel {
     _preferencesService.persistState(state);
   }
 
-  Future<TrackedDeviceData?> getTrackedDeviceData() async {
+  Future<Map<String, dynamic>> getTrackedDeviceData() async {
     final PackageInfo packageInfo = await PackageInfo.fromPlatform();
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
 
-    return switch (defaultTargetPlatform) {
-      TargetPlatform.android => _getAndroidDeviceData(packageInfo, deviceInfo),
-      TargetPlatform.iOS => _getIOSDeviceData(packageInfo, deviceInfo),
-      _ => null,
+    Map<String, dynamic> properties = {
+      '__version': packageInfo.version,
+      '__buildNumber': packageInfo.buildNumber,
+      '__referrer': '',
     };
-  }
 
-  Future<TrackedDeviceData> _getAndroidDeviceData(PackageInfo packageInfo, DeviceInfoPlugin deviceInfo) async {
-    final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+      properties.addAll({
+        'deviceId': androidInfo.id,
+        'brand': androidInfo.brand,
+        'model': androidInfo.model,
+        'device': androidInfo.isPhysicalDevice ? 'android' : 'android-emulator',
+        'manufacturer': androidInfo.manufacturer,
+        'osVersion': androidInfo.version.release,
+      });
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final IosDeviceInfo iosDeviceInfo = await deviceInfo.iosInfo;
+      properties.addAll({
+        'deviceId': iosDeviceInfo.identifierForVendor,
+        'brand': 'iPhone',
+        'device': iosDeviceInfo.isPhysicalDevice ? 'ios' : 'ios-simulator',
+        'model': iosDeviceInfo.model,
+        'osVersion': iosDeviceInfo.systemVersion,
+      });
+    }
 
-    return TrackedDeviceData(
-      deviceId: androidInfo.id,
-      appVersion: packageInfo.version,
-      buildNumber: packageInfo.buildNumber,
-      os: 'android',
-    );
-  }
-
-  Future<TrackedDeviceData> _getIOSDeviceData(PackageInfo packageInfo, DeviceInfoPlugin deviceInfo) async {
-    final IosDeviceInfo iosDeviceInfo = await deviceInfo.iosInfo;
-    return TrackedDeviceData(
-      deviceId: iosDeviceInfo.identifierForVendor ?? '',
-      appVersion: packageInfo.version,
-      buildNumber: packageInfo.buildNumber,
-      os: 'iOS',
-    );
+    return properties;
   }
 }

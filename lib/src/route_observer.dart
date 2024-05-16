@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:openpanel_flutter/openpanel_flutter.dart';
 
-class OpenpanelRouteObserver extends RouteObserver with WidgetsBindingObserver {
+class OpenpanelObserver extends RouteObserver with WidgetsBindingObserver {
   @override
   void didPush(Route route, Route? previousRoute) {
     Openpanel.instance.event(name: 'screen_view', properties: {

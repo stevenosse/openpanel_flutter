@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
@@ -35,7 +36,6 @@ class Openpanel {
   Future<void> initialize({required OpenpanelOptions options}) async {
     this.options = options;
 
-    // Init state
     // TODO: Store state properties locally
     final deviceData = await getTrackedDeviceData();
     if (deviceData != null) {
@@ -49,6 +49,7 @@ class Openpanel {
         headers: {
           'openpanel-client-id': options.clientId,
           if (options.clientSecret != null) 'openpanel-client-secret': options.clientSecret,
+          'User-Agent': Platform.operatingSystem,
         },
       ),
     );
@@ -60,6 +61,8 @@ class Openpanel {
 
     _isClientInitialised = true;
   }
+
+  void setCollectionEnabled(bool enabled) => state = state.copyWith(isCollectionEnabled: enabled);
 
   void setProfileId(String profileId) => state = state.copyWith(profileId: profileId);
 
@@ -136,12 +139,16 @@ class Openpanel {
     state = const OpenpanelState();
   }
 
-  T _execute<T>(T Function() action) {
+  void _execute<T>(T Function() action) {
     if (!_isClientInitialised) {
       throw Exception('You need to call Openpanel.init(...) first.');
     }
 
-    return action();
+    if (!state.isCollectionEnabled) {
+      return;
+    }
+
+    action();
   }
 
   Future<TrackedDeviceData?> getTrackedDeviceData() async {

@@ -17,7 +17,8 @@ class TrackedDeviceData extends Equatable {
     return {
       '__version': appVersion,
       '__buildNumbe': buildNumber,
-      '__referrer': os,
+      '__referrer': '',
+      'os': os,
       'deviceId': deviceId,
     };
   }

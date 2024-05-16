@@ -46,7 +46,7 @@ void main() async {
 }
 ```
 
-Add the `OpenpanelRouteObserver`if you want to track navigation
+Add the `OpenpanelObserver`if you want to track navigation
 
 ## Track event
 

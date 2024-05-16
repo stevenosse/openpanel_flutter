@@ -1,0 +1,26 @@
+name: openpanel_flutter
+description: "Non official Flutter SDK for openpanel.dev"
+version: 0.0.1
+homepage: github.com/stevenosse/openpanel_flutter.git
+
+environment:
+  sdk: '>=3.3.1 <4.0.0'
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  device_info_plus: ^10.1.0
+  dio: ^5.4.3+1
+  dio_smart_retry: ^6.0.0
+  equatable: ^2.0.5
+  
+  package_info_plus: ^8.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:

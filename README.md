@@ -5,10 +5,18 @@ alternative to Mixpanel
 
 ## Getting started
 
-Install this package from [pub.dev](https://pub.dev)
+- Install this package from [pub.dev](https://pub.dev) (soon)
 
 ```bash
 $ flutter pub add openpanel_flutter
+```
+- Install from Git:
+Add this to your pubspec.yaml file:
+
+```yaml
+dependencies:
+  openpanel_flutter: 
+    git: https://github.com/stevenosse/openpanel_flutter.git
 ```
 
 ## Usage

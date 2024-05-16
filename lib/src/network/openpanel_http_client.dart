@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
 
-// TODO: Add retry interceptor
 class OpenpanelHttpClient {
   final Dio dio;
   final bool verbose;

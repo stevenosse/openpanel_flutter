@@ -19,6 +19,7 @@ dependencies:
   uuid: ^4.4.0
   
   package_info_plus: ^8.0.0
+  mason_logger: ^0.2.15
 
 dev_dependencies:
   flutter_test:

@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mason_logger/mason_logger.dart';
 import 'package:openpanel_flutter/src/constants/constants.dart';
 import 'package:openpanel_flutter/src/models/open_panel_event_options.dart';
 import 'package:openpanel_flutter/src/models/open_panel_options.dart';
@@ -17,7 +18,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-// TODO: Setup logger
 class Openpanel {
   static final Openpanel instance = Openpanel._internal();
 
@@ -26,6 +26,8 @@ class Openpanel {
   }
 
   Openpanel._internal();
+
+  final Logger _logger = Logger();
 
   late final OpenpanelOptions options;
   late final PreferencesService _preferencesService;
@@ -72,13 +74,10 @@ class Openpanel {
     );
     dio.interceptors.add(RetryInterceptor(dio: dio));
     if (options.verbose) {
-      dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-      ));
+      dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
     }
 
-    _httpClient = OpenpanelHttpClient(dio: dio);
+    _httpClient = OpenpanelHttpClient(dio: dio, verbose: options.verbose, logger: _logger);
 
     _isClientInitialised = true;
   }

@@ -4,7 +4,7 @@ import 'package:openpanel_flutter/src/models/typedefs.dart';
 
 bool defaultRouteFilter(Route<dynamic>? route) => route is PageRoute;
 
-class OpenpanelObserver extends RouteObserver with WidgetsBindingObserver {
+class OpenpanelObserver extends RouteObserver {
   final RouteFilter routeFilter;
 
   OpenpanelObserver({this.routeFilter = defaultRouteFilter});
@@ -35,15 +35,6 @@ class OpenpanelObserver extends RouteObserver with WidgetsBindingObserver {
     }
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state.getFullName() != null) {
-      Openpanel.instance.event(name: state.getFullName()!);
-    }
-
-    super.didChangeAppLifecycleState(state);
-  }
-
   void _trackScreenView(Route<dynamic> route) {
     if (route.settings.name == null) {
       return;
@@ -53,15 +44,4 @@ class OpenpanelObserver extends RouteObserver with WidgetsBindingObserver {
       '__path': route.settings.name,
     });
   }
-}
-
-extension on AppLifecycleState {
-  String? getFullName() => switch (this) {
-        AppLifecycleState.paused ||
-        AppLifecycleState.inactive ||
-        AppLifecycleState.hidden =>
-          'Application backgrounded',
-        AppLifecycleState.resumed => 'Application foregrounded',
-        _ => null,
-      };
 }

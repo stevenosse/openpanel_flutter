@@ -1,26 +1,51 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:logger/logger.dart';
+import 'package:openpanel_flutter/openpanel_flutter.dart';
+import 'package:openpanel_flutter/src/constants/constants.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
+import 'package:ua_client_hints/ua_client_hints.dart';
 
 typedef ApiResponse<T, E> = ({T? response, E? error});
 
 class OpenpanelHttpClient {
-  final Dio dio;
+  late final Dio _dio;
   final bool verbose;
   final Logger _logger;
 
   OpenpanelHttpClient({
-    required this.dio,
     required this.verbose,
     required Logger logger,
   }) : _logger = logger;
 
-  void updateProfile({required UpdateProfilePayload payload, required Map<String, dynamic> stateProperties}) {
+  Future<void> init(OpenpanelOptions options) async {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: options.url ?? kDefaultBaseUrl,
+        headers: {
+          'openpanel-client-id': options.clientId,
+          if (options.clientSecret != null)
+            'openpanel-client-secret': options.clientSecret,
+          'User-Agent': await userAgentClientHintsHeader(),
+        },
+      ),
+    );
+    _dio.interceptors.add(RetryInterceptor(dio: _dio));
+    if (options.verbose) {
+      _dio.interceptors
+          .add(LogInterceptor(requestBody: true, responseBody: true));
+    }
+  }
+
+  void updateProfile({
+    required UpdateProfilePayload payload,
+    required Map<String, dynamic> stateProperties,
+  }) {
     runApiCall(() async {
-      await dio.post('/profile', data: {
+      await _dio.post('/profile', data: {
         ...payload.toJson(),
         'properties': {
           ...payload.properties,
@@ -30,9 +55,12 @@ class OpenpanelHttpClient {
     });
   }
 
-  void increment({required String profileId, required String property, required int value}) {
+  void increment(
+      {required String profileId,
+      required String property,
+      required int value}) {
     runApiCall(() async {
-      dio.post('/profile/increment', data: {
+      _dio.post('/profile/increment', data: {
         'profileId': profileId,
         'property': property,
         'value': value,
@@ -40,9 +68,13 @@ class OpenpanelHttpClient {
     });
   }
 
-  void decrement({required String profileId, required String property, required int value}) {
+  void decrement({
+    required String profileId,
+    required String property,
+    required int value,
+  }) {
     runApiCall(() async {
-      dio.post('/profile/decrement', data: {
+      _dio.post('/profile/decrement', data: {
         'profileId': profileId,
         'property': property,
         'value': value,
@@ -52,7 +84,7 @@ class OpenpanelHttpClient {
 
   Future<String?> event({required PostEventPayload payload}) async {
     final response = await runApiCall(() async {
-      final response = await dio.post('/event', data: payload.toJson());
+      final response = await _dio.post('/event', data: payload.toJson());
       return response.data as String;
     });
 

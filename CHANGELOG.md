@@ -1,3 +1,9 @@
+## 0.0.4
+Add:
+- Referrer url for Android & iOS
+- User agent headers are now properly sent
+- App lifecycle events are automatically handled now
+
 ## 0.0.3
 - Remove mason_logger
 

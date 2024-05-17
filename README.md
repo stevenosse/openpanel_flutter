@@ -5,18 +5,10 @@ alternative to Mixpanel
 
 ## Getting started
 
-- Install this package from [pub.dev](https://pub.dev) (soon)
+- Install this package from [pub.dev](https://pub.dev)
 
 ```bash
 $ flutter pub add openpanel_flutter
-```
-- Install from Git:
-Add this to your pubspec.yaml file:
-
-```yaml
-dependencies:
-  openpanel_flutter: 
-    git: https://github.com/stevenosse/openpanel_flutter.git
 ```
 
 ## Usage
@@ -59,5 +51,5 @@ Openpanel.instance.event('event_name', properties: {
 ```
 
 ## Additional information
-- Openpanel: [Github Repo](https://github.com/Openpanel-dev/openpanel)
+- Openpanel: [Github Repo](https://github.com/Openpanel-dev/openpanel) | [Website](https://openpanel.dev) | [Documentation](https://docs.openpanel.dev) | [Author](https://x.com/CarlLindesvard)
 - Maintainer: [Steve NOSSE](https://x.com/nossesteve)

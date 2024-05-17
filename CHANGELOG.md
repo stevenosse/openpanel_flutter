@@ -1,3 +1,8 @@
+## 0.0.2
+- Update readme
+
 ## 0.0.1
 
-* WIP
+Initial version:
+- Client initialisation
+- Events logging

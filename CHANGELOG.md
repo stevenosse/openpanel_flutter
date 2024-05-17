@@ -1,3 +1,6 @@
+## 0.0.3
+- Remove mason_logger
+
 ## 0.0.2
 - Update readme
 

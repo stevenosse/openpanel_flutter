@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:mason_logger/mason_logger.dart';
+import 'package:logger/logger.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
 
@@ -18,9 +18,7 @@ class OpenpanelHttpClient {
     required Logger logger,
   }) : _logger = logger;
 
-  void updateProfile(
-      {required UpdateProfilePayload payload,
-      required Map<String, dynamic> stateProperties}) {
+  void updateProfile({required UpdateProfilePayload payload, required Map<String, dynamic> stateProperties}) {
     runApiCall(() async {
       await dio.post('/profile', data: {
         ...payload.toJson(),
@@ -32,10 +30,7 @@ class OpenpanelHttpClient {
     });
   }
 
-  void increment(
-      {required String profileId,
-      required String property,
-      required int value}) {
+  void increment({required String profileId, required String property, required int value}) {
     runApiCall(() async {
       dio.post('/profile/increment', data: {
         'profileId': profileId,
@@ -45,10 +40,7 @@ class OpenpanelHttpClient {
     });
   }
 
-  void decrement(
-      {required String profileId,
-      required String property,
-      required int value}) {
+  void decrement({required String profileId, required String property, required int value}) {
     runApiCall(() async {
       dio.post('/profile/decrement', data: {
         'profileId': profileId,
@@ -77,7 +69,7 @@ class OpenpanelHttpClient {
 
       return (response: response, error: null);
     } on DioException catch (e) {
-      _logger.err(e.message);
+      _logger.e(e.message);
       return (response: null, error: e);
     } on SocketException catch (e) {
       _logError('Failed to connect to the internet.');
@@ -87,7 +79,7 @@ class OpenpanelHttpClient {
 
   void _logError(String message) {
     if (verbose) {
-      _logger.err(message);
+      _logger.e(message);
     }
   }
 }

@@ -40,5 +40,6 @@ class UpdateProfilePayload extends Equatable {
   }
 
   @override
-  List<Object?> get props => [profileId, firstName, lastName, avatar, email, properties];
+  List<Object?> get props =>
+      [profileId, firstName, lastName, avatar, email, properties];
 }

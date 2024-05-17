@@ -14,7 +14,8 @@ class OpenpanelState extends Equatable {
   });
 
   @override
-  List<Object?> get props => [deviceId, profileId, properties, isCollectionEnabled];
+  List<Object?> get props =>
+      [deviceId, profileId, properties, isCollectionEnabled];
 
   factory OpenpanelState.fromJson(Map<String, dynamic> json) {
     return OpenpanelState(

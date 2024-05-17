@@ -1,7 +1,8 @@
 name: openpanel_flutter
 description: "Non official Flutter SDK for openpanel.dev"
 version: 0.0.1
-homepage: github.com/stevenosse/openpanel_flutter.git
+homepage: https://github.com/stevenosse/openpanel_flutter.git
+topics: analytics
 
 environment:
   sdk: '>=3.3.1 <4.0.0'

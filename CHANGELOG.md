@@ -1,3 +1,6 @@
 ## 0.0.1
 
-* WIP
+Initial version
+Feat:
+- Client initialisation
+- Events logging

@@ -38,19 +38,35 @@ class Openpanel {
 
   OpenpanelState state = const OpenpanelState();
 
+  /// Initialise Openpanel.
+  /// This must be called before using Openpanel.
+  ///
+  /// Example:
+  /// ```dart
+  /// Openpanel.instance.initialize(
+  ///   options: OpenpanelOptions(
+  ///     url: <YOUR_OPENPANEL_URL>, // optional
+  ///     clientId: <YOUR_CLIENT_ID>,
+  ///     clientSecret: <YOUR_CLIENT_SECRET>,
+  ///     verbose: true, // optional, defaults to false
+  ///   ),
+  ///)
+  ///```
   Future<void> initialize({required OpenpanelOptions options}) async {
     if (_isClientInitialised) {
       return;
     }
     this.options = options;
 
-    _preferencesService = PreferencesService(await SharedPreferences.getInstance());
+    _preferencesService =
+        PreferencesService(await SharedPreferences.getInstance());
 
-    final OpenpanelState? savedState = await _preferencesService.getSavedState();
+    final OpenpanelState? savedState =
+        await _preferencesService.getSavedState();
     if (savedState != null) {
       state = savedState;
     } else {
-      final deviceData = await getTrackedDeviceData();
+      final deviceData = await _getTrackedDeviceData();
       if (deviceData.isNotEmpty) {
         setGlobalProperties(deviceData);
         state = state.copyWith(
@@ -67,24 +83,34 @@ class Openpanel {
         baseUrl: options.url ?? kDefaultBaseUrl,
         headers: {
           'openpanel-client-id': options.clientId,
-          if (options.clientSecret != null) 'openpanel-client-secret': options.clientSecret,
+          if (options.clientSecret != null)
+            'openpanel-client-secret': options.clientSecret,
           'User-Agent': Platform.operatingSystem,
         },
       ),
     );
     dio.interceptors.add(RetryInterceptor(dio: dio));
     if (options.verbose) {
-      dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
+      dio.interceptors
+          .add(LogInterceptor(requestBody: true, responseBody: true));
     }
 
-    _httpClient = OpenpanelHttpClient(dio: dio, verbose: options.verbose, logger: _logger);
+    _httpClient = OpenpanelHttpClient(
+        dio: dio, verbose: options.verbose, logger: _logger);
 
     _isClientInitialised = true;
   }
 
-  void setCollectionEnabled(bool enabled) => state = state.copyWith(isCollectionEnabled: enabled);
+  /// Enable or disable collection. Enabled by default.
+  void setCollectionEnabled(bool enabled) =>
+      state = state.copyWith(isCollectionEnabled: enabled);
 
-  void setProfileId(String profileId) => state = state.copyWith(profileId: profileId);
+  /// Set profile id
+  ///
+  /// Profile ids are automatically generated if not set and never change unless you
+  /// call [clear] to reset them, use this method or reinstall the app.
+  void setProfileId(String profileId) =>
+      state = state.copyWith(profileId: profileId);
 
   void updateProfile({required UpdateProfilePayload payload}) {
     _execute(() {
@@ -96,7 +122,10 @@ class Openpanel {
     });
   }
 
-  void increment({required String property, required int value, OpenpanelEventOptions? eventOptions}) {
+  void increment(
+      {required String property,
+      required int value,
+      OpenpanelEventOptions? eventOptions}) {
     _execute(() {
       final profileId = eventOptions?.profileId ?? state.profileId;
       if (profileId == null) {
@@ -104,11 +133,15 @@ class Openpanel {
         return;
       }
 
-      _httpClient.increment(profileId: profileId, property: property, value: value);
+      _httpClient.increment(
+          profileId: profileId, property: property, value: value);
     });
   }
 
-  void decrement({required String property, required int value, OpenpanelEventOptions? eventOptions}) {
+  void decrement(
+      {required String property,
+      required int value,
+      OpenpanelEventOptions? eventOptions}) {
     _execute(() {
       final profileId = eventOptions?.profileId ?? state.profileId;
       if (profileId == null) {
@@ -124,7 +157,12 @@ class Openpanel {
     });
   }
 
-  void event({required String name, Map<String, dynamic> properties = const {}}) {
+  /// Send an event
+  ///
+  /// You can send events with any name and any properties. By default, the device
+  /// infos such as id, branch, model, etc... will be sent.
+  void event(
+      {required String name, Map<String, dynamic> properties = const {}}) {
     _execute(() async {
       final profileId = properties['profileId'] ?? state.profileId;
 
@@ -143,6 +181,8 @@ class Openpanel {
     });
   }
 
+  /// Set global properties
+  /// These properties will be sent every time an event is sent
   void setGlobalProperties(Map<String, dynamic> properties) {
     state = state.copyWith(properties: {
       ...state.properties,
@@ -150,6 +190,8 @@ class Openpanel {
     });
   }
 
+  /// Clear all properties
+  /// Use this method if you want to reset the global properties
   void clear() {
     state = const OpenpanelState();
     _preferencesService.persistState(state);
@@ -157,7 +199,8 @@ class Openpanel {
 
   void _execute<T>(T Function() action) {
     if (!_isClientInitialised) {
-      throw Exception('Openpanel is not initialised. You must initialize Openpanel before using Openpanel.instance.');
+      throw Exception(
+          'Openpanel is not initialised. You must initialize Openpanel before using Openpanel.instance.');
     }
 
     if (!state.isCollectionEnabled) {
@@ -169,7 +212,7 @@ class Openpanel {
     _preferencesService.persistState(state);
   }
 
-  Future<Map<String, dynamic>> getTrackedDeviceData() async {
+  Future<Map<String, dynamic>> _getTrackedDeviceData() async {
     final PackageInfo packageInfo = await PackageInfo.fromPlatform();
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
 

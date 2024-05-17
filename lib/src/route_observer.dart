@@ -28,7 +28,9 @@ class OpenpanelObserver extends RouteObserver with WidgetsBindingObserver {
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    if (previousRoute != null && routeFilter(previousRoute) && routeFilter(route)) {
+    if (previousRoute != null &&
+        routeFilter(previousRoute) &&
+        routeFilter(route)) {
       _trackScreenView(previousRoute);
     }
   }

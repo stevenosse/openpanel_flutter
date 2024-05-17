@@ -59,5 +59,5 @@ Openpanel.instance.event('event_name', properties: {
 ```
 
 ## Additional information
-- Openpanel: [Github Repo](https://github.com/Openpanel-dev/openpanel)
+- Openpanel: [Github Repo](https://github.com/Openpanel-dev/openpanel) | [Website](https://openpanel.dev) | [Documentation](https://docs.openpanel.dev) | [Author](https://x.com/CarlLindesvard)
 - Maintainer: [Steve NOSSE](https://x.com/nossesteve)

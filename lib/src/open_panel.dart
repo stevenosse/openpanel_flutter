@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:logger/web.dart';
 
 import 'package:openpanel_flutter/src/models/open_panel_event_options.dart';
@@ -9,6 +10,7 @@ import 'package:openpanel_flutter/src/models/open_panel_options.dart';
 import 'package:openpanel_flutter/src/models/open_panel_state.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
+import 'package:openpanel_flutter/src/observers/referrer_observer.dart';
 import 'package:openpanel_flutter/src/services/openpanel_http_client.dart';
 import 'package:openpanel_flutter/src/services/preferences_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -43,6 +45,12 @@ class Openpanel {
 
   /// Initialise Openpanel.
   /// This must be called before using Openpanel.
+  /// 
+  ///  - [options]
+  ///    - [url] - Openpanel url
+  ///    - [clientId] - Openpanel client id
+  ///    - [clientSecret] - Openpanel client secret
+  ///    - [verbose] - Enable verbose logging
   ///
   /// Example:
   /// ```dart
@@ -88,6 +96,8 @@ class Openpanel {
     );
 
     await _httpClient.init(options);
+
+    WidgetsBinding.instance.addObserver(ReferrerObserver());
 
     _isClientInitialised = true;
   }

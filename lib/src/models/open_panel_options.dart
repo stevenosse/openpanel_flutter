@@ -1,5 +1,5 @@
 class OpenpanelOptions {
-  /// This is the base url of the OpenPanel API.
+  /// This is the base url of the Openpanel API.
   /// You may want to change this if you are using a self-hosted version of Openpanel.
   ///
   /// Default value is: https://api.openpanel.dev

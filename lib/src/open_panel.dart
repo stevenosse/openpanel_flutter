@@ -2,7 +2,6 @@ import 'dart:developer';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:logger/web.dart';
 
 import 'package:openpanel_flutter/src/models/open_panel_event_options.dart';
@@ -10,7 +9,6 @@ import 'package:openpanel_flutter/src/models/open_panel_options.dart';
 import 'package:openpanel_flutter/src/models/open_panel_state.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
-import 'package:openpanel_flutter/src/observers/lifecycle_observer.dart';
 import 'package:openpanel_flutter/src/services/openpanel_http_client.dart';
 import 'package:openpanel_flutter/src/services/preferences_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,11 +16,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class Openpanel {
+  /// Openpanel instance
+  ///
+  /// Example:
+  /// ```dart
+  /// Openpanel.instance.event(name: 'screen_view', properties: {
+  ///   'my_event': eventName,
+  ///})
+  ///```
   static final Openpanel instance = Openpanel._internal();
 
-  factory Openpanel() {
-    return instance;
-  }
+  factory Openpanel() => instance;
 
   Openpanel._internal();
 
@@ -85,8 +89,6 @@ class Openpanel {
 
     await _httpClient.init(options);
 
-    WidgetsBinding.instance.addObserver(LifecycleObserver());
-
     _isClientInitialised = true;
   }
 
@@ -102,7 +104,7 @@ class Openpanel {
       _state = _state.copyWith(profileId: profileId);
 
   /// Update profile
-  /// 
+  ///
   /// Update an existing profile to add additional infos
   void updateProfile({required UpdateProfilePayload payload}) {
     _execute(() {

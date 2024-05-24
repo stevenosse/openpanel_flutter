@@ -55,10 +55,11 @@ class OpenpanelHttpClient {
     });
   }
 
-  void increment(
-      {required String profileId,
-      required String property,
-      required int value}) {
+  void increment({
+    required String profileId,
+    required String property,
+    required int value,
+  }) {
     runApiCall(() async {
       _dio.post('/profile/increment', data: {
         'profileId': profileId,

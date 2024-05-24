@@ -2,12 +2,20 @@ import 'package:flutter/widgets.dart';
 import 'package:openpanel_flutter/openpanel_flutter.dart';
 import 'package:openpanel_flutter/src/models/typedefs.dart';
 
+typedef ScreenNameExtractor = String? Function(RouteSettings settings);
+
 bool defaultRouteFilter(Route<dynamic>? route) => route is PageRoute;
+
+String? defaultNameExtractor(RouteSettings settings) => settings.name;
 
 class OpenpanelObserver extends RouteObserver {
   final RouteFilter routeFilter;
+  final ScreenNameExtractor screenNameExtractor;
 
-  OpenpanelObserver({this.routeFilter = defaultRouteFilter});
+  OpenpanelObserver({
+    this.routeFilter = defaultRouteFilter,
+    this.screenNameExtractor = defaultNameExtractor,
+  });
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
@@ -36,12 +44,13 @@ class OpenpanelObserver extends RouteObserver {
   }
 
   void _trackScreenView(Route<dynamic> route) {
-    if (route.settings.name == null) {
+    final routeName = screenNameExtractor(route.settings);
+    if (routeName == null) {
       return;
     }
 
     Openpanel.instance.event(name: 'screen_view', properties: {
-      '__path': route.settings.name,
+      '__path': routeName,
     });
   }
 }

@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:openpanel_flutter/openpanel_flutter.dart';
 import 'package:openpanel_flutter/src/models/typedefs.dart';
 
-typedef ScreenNameExtractor = String? Function(RouteSettings settings);
-
 bool defaultRouteFilter(Route<dynamic>? route) => route is PageRoute;
 
 String? defaultNameExtractor(RouteSettings settings) => settings.name;

@@ -1,6 +1,6 @@
 name: openpanel_flutter
 description: "Openpanel is an open-source alternative to Mixpanel that combines the power of Mixpanel with the ease of Plausible. This package is not officially maintained by the Openpanel team."
-version: 0.0.4
+version: 0.0.5
 homepage: https://github.com/stevenosse/openpanel_flutter.git
 topics: 
   - analytics
@@ -21,7 +21,7 @@ dependencies:
   package_info_plus: ^8.0.0
   referrer: ^0.0.2
   shared_preferences: ^2.2.3
-  ua_client_hints: ^1.2.2
+  device_user_agent: ^0.1.1
   uuid: ^4.4.0
 
 dev_dependencies:

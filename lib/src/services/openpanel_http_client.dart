@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:device_user_agent/device_user_agent.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:logger/logger.dart';
@@ -7,7 +8,6 @@ import 'package:openpanel_flutter/openpanel_flutter.dart';
 import 'package:openpanel_flutter/src/constants/constants.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
-import 'package:ua_client_hints/ua_client_hints.dart';
 
 typedef ApiResponse<T, E> = ({T? response, E? error});
 
@@ -29,7 +29,7 @@ class OpenpanelHttpClient {
           'openpanel-client-id': options.clientId,
           if (options.clientSecret != null)
             'openpanel-client-secret': options.clientSecret,
-          'User-Agent': await userAgentClientHintsHeader(),
+          'User-Agent': await DeviceUserAgent.instance.build(),
         },
       ),
     );

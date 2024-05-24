@@ -1,3 +1,8 @@
+## 0.0.5
+- Replace User Agent lib with another one that supports all platforms
+- Remove lifecycle events tracking (for now)
+- Update README
+
 ## 0.0.4
 Add:
 - Referrer url for Android & iOS

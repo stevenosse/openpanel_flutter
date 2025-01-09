@@ -252,7 +252,7 @@ class Openpanel {
       final IosDeviceInfo iosDeviceInfo = await deviceInfo.iosInfo;
       properties.addAll({
         'deviceId': iosDeviceInfo.identifierForVendor,
-        'brand': 'iPhone',
+        'brand': iosDeviceInfo.name,
         'model': iosDeviceInfo.model,
         'osVersion': iosDeviceInfo.systemVersion,
       });

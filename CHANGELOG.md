@@ -1,3 +1,7 @@
+## 0.2.0
+- Update package version
+- Add sdk name to headers
+
 ## 0.0.6
 - Add back referrer tracking
 

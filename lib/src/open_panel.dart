@@ -45,7 +45,7 @@ class Openpanel {
 
   /// Initialise Openpanel.
   /// This must be called before using Openpanel.
-  /// 
+  ///
   ///  - [options]
   ///    - [url] - Openpanel url
   ///    - [clientId] - Openpanel client id
@@ -236,7 +236,7 @@ class Openpanel {
     Map<String, dynamic> properties = {
       'appVersion': packageInfo.version,
       'buildNumber': packageInfo.buildNumber,
-      'installerStore': 'AppStore',
+      'installerStore': packageInfo.installerStore,
     };
 
     if (defaultTargetPlatform == TargetPlatform.android) {

@@ -27,6 +27,8 @@ class OpenpanelHttpClient {
         baseUrl: options.url ?? kDefaultBaseUrl,
         headers: {
           'openpanel-client-id': options.clientId,
+          'openpanel-sdk-name': 'openpanel-flutter',
+          'openpanel-sdk-version': '0.2.0',
           if (options.clientSecret != null)
             'openpanel-client-secret': options.clientSecret,
           'User-Agent': await DeviceUserAgent.instance.build(),

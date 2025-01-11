@@ -1,3 +1,6 @@
+## 0.2.1
+- Update documentation
+
 ## 0.2.0
 - Update package version
 - Add sdk name to headers

@@ -42,25 +42,6 @@ void main() async {
 }
 ```
 
-### Track navigation
-Add the `OpenpanelObserver`if you want to track navigation
-
-```dart
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return OpenpanelObserver(
-      child: MaterialApp(
-        navigatorObservers: [
-          OpenpanelObserver()
-        ],
-        ...
-      ),
-    );
-  }
-}
-```
-
 ### Track event
 
 To track an event, use:
@@ -69,6 +50,41 @@ To track an event, use:
 Openpanel.instance.event('event_name', properties: {
   ...
 })
+```
+
+### Track navigation
+Add the `OpenpanelObserver`if you want to track navigation
+
+```dart
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      navigatorObservers: [
+        OpenpanelObserver()
+      ],
+      ...
+    );
+  }
+}
+```
+
+### Track install referrer
+
+To track the referrer url, use the `ReferrerObserver` if you want to track the referrer url
+
+```dart
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      navigatorObservers: [
+        ReferrerObserver()
+      ],
+      ...
+    )
+  }
+}
 ```
 
 ### Global properties

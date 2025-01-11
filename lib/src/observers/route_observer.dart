@@ -6,8 +6,20 @@ bool defaultRouteFilter(Route<dynamic>? route) => route is PageRoute;
 
 String? defaultNameExtractor(RouteSettings settings) => settings.name;
 
+/// Openpanel route observer
 class OpenpanelObserver extends RouteObserver {
+  /// Route filter.
+  /// 
+  /// This is used to filter the routes that you want to track.
+  /// 
+  /// By default, it will track all routes that are [PageRoute].
   final RouteFilter routeFilter;
+
+  /// Screen name extractor.
+  /// 
+  /// This is used to extract the screen name from the [RouteSettings].
+  /// 
+  /// By default, it will use the [RouteSettings.name] property.
   final ScreenNameExtractor screenNameExtractor;
 
   OpenpanelObserver({

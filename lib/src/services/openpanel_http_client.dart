@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:device_user_agent/device_user_agent.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:logger/logger.dart';
@@ -8,6 +7,8 @@ import 'package:openpanel_flutter/openpanel_flutter.dart';
 import 'package:openpanel_flutter/src/constants/constants.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
+
+import 'device_user_agent.dart';
 
 typedef ApiResponse<T, E> = ({T? response, E? error});
 
@@ -29,16 +30,14 @@ class OpenpanelHttpClient {
           'openpanel-client-id': options.clientId,
           'openpanel-sdk-name': 'openpanel-flutter',
           'openpanel-sdk-version': '0.2.0',
-          if (options.clientSecret != null)
-            'openpanel-client-secret': options.clientSecret,
-          'User-Agent': await DeviceUserAgent.instance.build(),
+          if (options.clientSecret != null) 'openpanel-client-secret': options.clientSecret,
+          'User-Agent': await DeviceUserAgent().getUserAgent(),
         },
       ),
     );
     _dio.interceptors.add(RetryInterceptor(dio: _dio));
     if (options.verbose) {
-      _dio.interceptors
-          .add(LogInterceptor(requestBody: true, responseBody: true));
+      _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
     }
   }
 

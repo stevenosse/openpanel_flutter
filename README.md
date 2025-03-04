@@ -121,7 +121,7 @@ You can disable events collection if you don't want to send events to Openpanel.
 Openpanel.instance.setCollectionEnabled(false);
 ```
 
-## Data Tracking
+## Data tracking
 
 This plugin automatically tracks the following data:
 - App version

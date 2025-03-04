@@ -1,5 +1,6 @@
 ## 0.2.1
 - Update documentation
+- Upgrade dependencies
 
 ## 0.2.0
 - Update package version

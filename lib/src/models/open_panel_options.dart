@@ -1,5 +1,5 @@
 /// Openpanel options
-/// 
+///
 /// This is used to configure Openpanel
 class OpenpanelOptions {
   /// This is the base url of the Openpanel API.

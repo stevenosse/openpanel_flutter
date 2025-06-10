@@ -5,12 +5,14 @@ class OpenpanelState extends Equatable {
   final String? profileId;
   final bool isCollectionEnabled;
   final Map<String, dynamic> properties;
+  final bool isTracingSampled;
 
   const OpenpanelState({
     this.deviceId,
     this.profileId,
     this.isCollectionEnabled = true,
     this.properties = const {},
+    this.isTracingSampled = true,
   });
 
   @override
@@ -23,6 +25,7 @@ class OpenpanelState extends Equatable {
       profileId: json['profileId'],
       properties: json['properties'],
       isCollectionEnabled: json['isCollectionEnabled'],
+      isTracingSampled: json['isTracingSampled'] ?? true,
     );
   }
 
@@ -32,6 +35,7 @@ class OpenpanelState extends Equatable {
       'profileId': profileId,
       'properties': properties,
       'isCollectionEnabled': isCollectionEnabled,
+      'isTracingSampled': isTracingSampled,
     };
   }
 
@@ -40,12 +44,14 @@ class OpenpanelState extends Equatable {
     String? profileId,
     Map<String, dynamic>? properties,
     bool? isCollectionEnabled,
+    bool? isTracingSampled
   }) {
     return OpenpanelState(
       profileId: profileId ?? this.profileId,
       deviceId: deviceId ?? this.deviceId,
       properties: properties ?? this.properties,
       isCollectionEnabled: isCollectionEnabled ?? this.isCollectionEnabled,
+      isTracingSampled: isTracingSampled ?? this.isTracingSampled,
     );
   }
 }

@@ -1,4 +1,4 @@
-import 'dart:developer' as dev;
+import 'dart:developer';
 import 'dart:math';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -148,7 +148,6 @@ class Openpanel {
     _execute(() {
       final profileId = eventOptions?.profileId ?? _state.profileId;
       if (profileId == null) {
-        dev.log('No profile id found');
         return;
       }
 
@@ -171,7 +170,6 @@ class Openpanel {
     _execute(() {
       final profileId = eventOptions?.profileId ?? _state.profileId;
       if (profileId == null) {
-        dev.log('No profile id found');
         return;
       }
 

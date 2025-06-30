@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:math';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -78,12 +79,22 @@ class Openpanel {
       _state = savedState;
     } else {
       final deviceData = await _getTrackedDeviceData();
+
+      bool sampled = true;
+      if (options.tracingSampleRate < 1.0) {
+        double draw = Random().nextDouble();
+        sampled = draw < options.tracingSampleRate;
+      }
+
       if (deviceData.isNotEmpty) {
         setGlobalProperties(deviceData);
         _state = _state.copyWith(
           profileId: const Uuid().v4(),
           deviceId: deviceData['deviceId'] ?? const Uuid().v4(),
+          isTracingSampled: sampled,
         );
+      } else {
+        _state = _state.copyWith(isTracingSampled: sampled);
       }
 
       _preferencesService.persistState(_state);
@@ -137,7 +148,6 @@ class Openpanel {
     _execute(() {
       final profileId = eventOptions?.profileId ?? _state.profileId;
       if (profileId == null) {
-        log('No profile id found');
         return;
       }
 
@@ -160,7 +170,6 @@ class Openpanel {
     _execute(() {
       final profileId = eventOptions?.profileId ?? _state.profileId;
       if (profileId == null) {
-        log('No profile id found');
         return;
       }
 
@@ -223,6 +232,8 @@ class Openpanel {
     if (!_state.isCollectionEnabled) {
       return;
     }
+
+    if (!_state.isTracingSampled) return;
 
     action();
 

@@ -80,11 +80,8 @@ class Openpanel {
     } else {
       final deviceData = await _getTrackedDeviceData();
 
-      bool sampled = true;
-      if (options.tracingSampleRate < 1.0) {
-        double draw = Random().nextDouble();
-        sampled = draw < options.tracingSampleRate;
-      }
+      double rate = options.tracingSampleRate;
+      bool sampled = rate >= 1.0 || Random().nextDouble() < rate;
 
       if (deviceData.isNotEmpty) {
         setGlobalProperties(deviceData);

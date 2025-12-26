@@ -1,3 +1,13 @@
+## 0.3.0
+- **Breaking**: Migrate to new OpenPanel tracking API
+  - All API calls now use the unified `/track` endpoint
+  - Event tracking uses `type: "track"`
+  - User identification uses `type: "identify"`
+  - Increment/decrement use `type: "increment"` and `type: "decrement"`
+- Add desktop platform support (Windows, macOS, Linux)
+  - Referrer tracking is gracefully disabled on non-mobile platforms
+- See [API documentation](https://openpanel.dev/docs/api/track) for details
+
 ## 0.2.1
 - Update documentation
 - Upgrade dependencies

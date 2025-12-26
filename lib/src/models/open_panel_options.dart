@@ -17,10 +17,14 @@ class OpenpanelOptions {
   /// Enable verbose logging
   final bool verbose;
 
+  /// Percentage of sessions that will be sampled for tracing (0.0 - 1.0)
+  final double tracingSampleRate;
+
   OpenpanelOptions({
     this.url,
     required this.clientId,
     this.clientSecret,
     this.verbose = false,
+    this.tracingSampleRate = 1.0,
   });
 }

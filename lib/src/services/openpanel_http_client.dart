@@ -6,7 +6,6 @@ import 'package:logger/logger.dart';
 import 'package:openpanel_flutter/openpanel_flutter.dart';
 import 'package:openpanel_flutter/src/constants/constants.dart';
 import 'package:openpanel_flutter/src/models/post_event_payload.dart';
-import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
 
 import 'device_user_agent.dart';
 
@@ -30,14 +29,16 @@ class OpenpanelHttpClient {
           'openpanel-client-id': options.clientId,
           'openpanel-sdk-name': 'openpanel-flutter',
           'openpanel-sdk-version': '0.2.0',
-          if (options.clientSecret != null) 'openpanel-client-secret': options.clientSecret,
+          if (options.clientSecret != null)
+            'openpanel-client-secret': options.clientSecret,
           'User-Agent': await DeviceUserAgent().getUserAgent(),
         },
       ),
     );
     _dio.interceptors.add(RetryInterceptor(dio: _dio));
     if (options.verbose) {
-      _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
+      _dio.interceptors
+          .add(LogInterceptor(requestBody: true, responseBody: true));
     }
   }
 
@@ -46,11 +47,14 @@ class OpenpanelHttpClient {
     required Map<String, dynamic> stateProperties,
   }) {
     runApiCall(() async {
-      await _dio.post('/profile', data: {
-        ...payload.toJson(),
-        'properties': {
-          ...payload.properties,
-          ...stateProperties,
+      await _dio.post('/track', data: {
+        'type': 'identify',
+        'payload': {
+          ...payload.toJson(),
+          'properties': {
+            ...payload.properties,
+            ...stateProperties,
+          }
         }
       });
     });
@@ -62,10 +66,13 @@ class OpenpanelHttpClient {
     required int value,
   }) {
     runApiCall(() async {
-      _dio.post('/profile/increment', data: {
-        'profileId': profileId,
-        'property': property,
-        'value': value,
+      _dio.post('/track', data: {
+        'type': 'increment',
+        'payload': {
+          'profileId': profileId,
+          'property': property,
+          'value': value,
+        }
       });
     });
   }
@@ -76,17 +83,23 @@ class OpenpanelHttpClient {
     required int value,
   }) {
     runApiCall(() async {
-      _dio.post('/profile/decrement', data: {
-        'profileId': profileId,
-        'property': property,
-        'value': value,
+      _dio.post('/track', data: {
+        'type': 'decrement',
+        'payload': {
+          'profileId': profileId,
+          'property': property,
+          'value': value,
+        }
       });
     });
   }
 
   Future<String?> event({required PostEventPayload payload}) async {
     final response = await runApiCall(() async {
-      final response = await _dio.post('/event', data: payload.toJson());
+      final response = await _dio.post('/track', data: {
+        'type': 'track',
+        'payload': payload.toJson(),
+      });
       return response.data as String;
     });
 

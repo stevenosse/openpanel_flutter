@@ -39,13 +39,12 @@ class OpenpanelState extends Equatable {
     };
   }
 
-  OpenpanelState copyWith({
-    String? deviceId,
-    String? profileId,
-    Map<String, dynamic>? properties,
-    bool? isCollectionEnabled,
-    bool? isTracingSampled
-  }) {
+  OpenpanelState copyWith(
+      {String? deviceId,
+      String? profileId,
+      Map<String, dynamic>? properties,
+      bool? isCollectionEnabled,
+      bool? isTracingSampled}) {
     return OpenpanelState(
       profileId: profileId ?? this.profileId,
       deviceId: deviceId ?? this.deviceId,

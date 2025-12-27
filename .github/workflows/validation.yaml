@@ -10,4 +10,4 @@ jobs:
       - uses: actions/checkout@v4 # required
       - uses: flutterings/dart-package-analyzer@v1
         with:
-          flutter_version: 3.22.0
+          flutter_version: 3.35.3

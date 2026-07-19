@@ -100,7 +100,7 @@ class OpenpanelHttpClient {
         'type': 'track',
         'payload': payload.toJson(),
       });
-      return response.data as String;
+      return response.data?.toString();
     });
 
     if (response.error != null) {

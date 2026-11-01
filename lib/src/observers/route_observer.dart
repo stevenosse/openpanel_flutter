@@ -6,8 +6,11 @@ bool defaultRouteFilter(Route<dynamic>? route) => route is PageRoute;
 
 String? defaultNameExtractor(RouteSettings settings) => settings.name;
 
-/// Openpanel route observer
-class OpenpanelObserver extends RouteObserver {
+/// Openpanel route observer.
+///
+/// Add this to your `MaterialApp.navigatorObservers` to automatically track
+/// screen views.
+class OpenpanelObserver extends RouteObserver<PageRoute<dynamic>> {
   /// Route filter.
   ///
   /// This is used to filter the routes that you want to track.
@@ -54,13 +57,18 @@ class OpenpanelObserver extends RouteObserver {
   }
 
   void _trackScreenView(Route<dynamic> route) {
+    if (!Openpanel.instance.isInitialised) {
+      return;
+    }
+
     final routeName = screenNameExtractor(route.settings);
     if (routeName == null) {
       return;
     }
 
-    Openpanel.instance.event(name: 'screen_view', properties: {
-      '__path': routeName,
-    });
+    Openpanel.instance.track(
+      name: 'screen_view',
+      properties: {'__path': routeName},
+    );
   }
 }

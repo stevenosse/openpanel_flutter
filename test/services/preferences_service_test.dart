@@ -17,8 +17,12 @@ void main() {
     });
 
     test('persistState should save state as JSON string', () async {
-      final state =
-          OpenpanelState(deviceId: 'testDevice', profileId: 'testProfile');
+      const state = OpenpanelState(
+        profileId: 'testProfile',
+        properties: {'role': 'admin'},
+        isCollectionEnabled: true,
+        isTracingSampled: true,
+      );
       when(() => mockSharedPreferences.setString(any(), any()))
           .thenAnswer((_) async => true);
 
@@ -37,17 +41,17 @@ void main() {
 
     test('getSavedState should return OpenpanelState when state is saved',
         () async {
-      final jsonString =
-          '{"deviceId":"testDevice","profileId":"testProfile","properties":{},"isCollectionEnabled":true}';
+      const jsonString =
+          '{"profileId":"testProfile","properties":{"role":"admin"},"isCollectionEnabled":true,"isTracingSampled":true}';
       when(() => mockSharedPreferences.getString(any())).thenReturn(jsonString);
 
       final result = await preferencesService.getSavedState();
 
       expect(result, isA<OpenpanelState>());
-      expect(result?.deviceId, equals('testDevice'));
       expect(result?.profileId, equals('testProfile'));
-      expect(result?.properties, isEmpty);
+      expect(result?.properties, equals({'role': 'admin'}));
       expect(result?.isCollectionEnabled, isTrue);
+      expect(result?.isTracingSampled, isTrue);
     });
   });
 }

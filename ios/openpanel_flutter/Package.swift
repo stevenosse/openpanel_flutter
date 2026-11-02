@@ -8,18 +8,20 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "openpanel_flutter",
+            name: "openpanel-flutter",
             targets: ["openpanel_flutter"]
         )
     ],
     dependencies: [
+        .package(name: "FlutterFramework", path: "../FlutterFramework"),
         .package(url: "https://github.com/Openpanel-dev/swift-sdk", from: "1.0.0")
     ],
     targets: [
         .target(
             name: "openpanel_flutter",
             dependencies: [
-                .product(name: "OpenPanel", package: "OpenPanel")
+                .product(name: "FlutterFramework", package: "FlutterFramework"),
+                .product(name: "OpenPanel", package: "swift-sdk")
             ]
         )
     ]

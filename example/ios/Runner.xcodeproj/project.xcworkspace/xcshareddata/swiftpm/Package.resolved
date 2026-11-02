@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "swift-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Openpanel-dev/swift-sdk",
+      "state" : {
+        "revision" : "d8181ebb986acce3e3bb177a93cc484241ba0414",
+        "version" : "1.0.0"
+      }
+    }
+  ],
+  "version" : 2
+}

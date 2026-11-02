@@ -1,7 +1,7 @@
 package dev.openpanel.openpanel_flutter
 
 import android.content.Context
-import dev.openpanel.OpenPanel
+import com.dev.openpanelsdk.OpenPanel
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel

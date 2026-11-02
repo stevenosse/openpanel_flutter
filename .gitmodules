@@ -1,0 +1,3 @@
+[submodule "android/openpanel-sdk"]
+	path = android/openpanel-sdk
+	url = https://github.com/Openpanel-dev/kotlin-sdk.git

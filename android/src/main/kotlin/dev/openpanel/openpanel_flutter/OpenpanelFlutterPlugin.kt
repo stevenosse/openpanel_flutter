@@ -81,12 +81,9 @@ class OpenpanelFlutterPlugin : FlutterPlugin, MethodCallHandler {
 
     private fun handleSetCollectionEnabled(call: MethodCall, result: Result) {
         val enabled = call.argument<Boolean>("enabled") ?: true
-        val currentContext = context
-        val opts = currentOptions
-        if (currentContext != null && opts != null) {
-            opts.disabled = !enabled
-            openPanel = OpenPanel.create(currentContext, opts)
-        }
+        // The SDK retains this mutable Options instance. Keep its profile,
+        // properties, queue and lifecycle callbacks when collection changes.
+        currentOptions?.disabled = !enabled
         result.success(null)
     }
 
@@ -196,11 +193,12 @@ class OpenpanelFlutterPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun handleFlush(result: Result) {
+        openPanel?.flush()
         result.success(null)
     }
 
     private fun handleReady(result: Result) {
-        currentOptions?.waitForProfile = false
+        openPanel?.ready()
         result.success(null)
     }
 }

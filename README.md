@@ -131,6 +131,29 @@ This plugin automatically tracks the following data:
 - Os version
 - Manufacturer
 
+## Development
+
+Use Flutter 3.47 or newer. The native SDK sources, licenses and revision notes are
+included in `android/openpanel-sdk` and `ios/openpanel_flutter/Vendor/OpenPanel`;
+no Git submodule initialization is needed. The Swift SDK is built by SwiftPM.
+
+Run the Dart tests and analyzer from the package root:
+
+```bash
+flutter test
+flutter analyze
+```
+
+Run the native regression test from `example` on an Android emulator or iOS
+simulator:
+
+```bash
+flutter test integration_test/openpanel_test.dart -d <DEVICE_ID>
+```
+
+The test sends events to a temporary HTTP server on the device, verifies their
+JSON payloads, and does not contact the OpenPanel API.
+
 ## Issues
 
 - [GitHub Issues](https://github.com/stevenosse/openpanel_flutter/issues)

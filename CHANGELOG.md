@@ -1,3 +1,38 @@
+## Unreleased
+
+### Breaking changes
+
+- Replace the Dart HTTP transport with the OpenPanel Kotlin and Swift SDKs.
+  Only Android and iOS are supported; Windows, macOS and Linux support is removed.
+- Require Dart 3.13 or newer and Flutter 3.47 or newer.
+
+### Added
+
+- Add `track`, `identify`, `alias`, `flush` and `ready` APIs. Keep `event` and
+  `updateProfile` as compatibility aliases.
+- Add `disabled`, `automaticTracking` and `waitForProfile` options. Add `apiUrl`
+  as the preferred name for the deprecated `url` option.
+- Persist whether a profile was explicitly identified. With `waitForProfile`,
+  anonymous events wait for `identify`, `setProfileId` or `ready`. Older saved
+  states without identification metadata are treated as anonymous.
+- Include the native SDK sources, licenses and revision notes in the package,
+  with SwiftPM integration on iOS. Git installations require no submodule setup.
+- Add Android and iOS integration tests that verify requests against a local
+  HTTP server.
+
+### Fixed
+
+- Preserve profile state, global properties and lifecycle subscriptions when
+  toggling event collection.
+- Forward `flush` and `ready` to the Kotlin SDK so queued events can be sent.
+- Preserve boolean values, including nested properties, when encoding iOS
+  events and profiles.
+- Fix Swift SDK identification requests containing profile and global properties.
+- Restore iOS app version, build number and device properties, including after
+  clearing the current profile.
+- Update the Android build configuration and CI Flutter version to match the
+  minimum supported toolchain.
+
 ## 0.3.0
 - **Breaking**: Migrate to new OpenPanel tracking API
   - All API calls now use the unified `/track` endpoint

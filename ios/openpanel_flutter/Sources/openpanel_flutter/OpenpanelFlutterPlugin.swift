@@ -3,7 +3,20 @@ import UIKit
 import OpenPanel
 
 public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
-    private var currentOptions: OpenPanel.Options?
+    private var isCollectionEnabled = false
+
+    private var defaultProperties: [String: Any] {
+        let device = UIDevice.current
+        var properties: [String: Any] = [
+            "platform": "ios",
+            "brand": "Apple",
+            "model": device.model,
+            "osVersion": device.systemVersion
+        ]
+        properties["appVersion"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        properties["buildNumber"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        return properties
+    }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "dev.openpanel/openpanel_flutter", binaryMessenger: registrar.messenger())
@@ -33,6 +46,7 @@ public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
             handleSetProfileId(call, result: result)
         case "clear":
             OpenPanel.clear()
+            OpenPanel.setGlobalProperties(defaultProperties)
             result(nil)
         case "flush":
             OpenPanel.flush()
@@ -58,17 +72,20 @@ public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
         let disabled = args["disabled"] as? Bool
         let automaticTracking = args["automaticTracking"] as? Bool
 
+        isCollectionEnabled = disabled != true
         let options = OpenPanel.Options(
             clientId: clientId,
             clientSecret: clientSecret,
             apiUrl: apiUrl,
             waitForProfile: waitForProfile,
-            disabled: disabled,
+            // Options is a value type in the Swift SDK. Capture the collection
+            // switch so toggling it does not initialize lifecycle observers again.
+            filter: { [weak self] _ in self?.isCollectionEnabled == true },
             automaticTracking: automaticTracking
         )
-        currentOptions = options
 
         OpenPanel.initialize(options: options)
+        OpenPanel.setGlobalProperties(defaultProperties)
         result(nil)
     }
 
@@ -79,10 +96,7 @@ public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        currentOptions?.disabled = !enabled
-        if let options = currentOptions {
-            OpenPanel.initialize(options: options)
-        }
+        isCollectionEnabled = enabled
         result(nil)
     }
 
@@ -93,7 +107,7 @@ public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        var properties = args["properties"] as? [String: Any] ?? [:]
+        var properties = OpenpanelProperties.normalize(args["properties"] as? [String: Any] ?? [:])
         if let profileId = args["profileId"] as? String {
             properties["profileId"] = profileId
         }
@@ -113,7 +127,7 @@ public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
         let lastName = args["lastName"] as? String
         let email = args["email"] as? String
         let avatar = args["avatar"] as? String
-        let properties = args["properties"] as? [String: Any]
+        let properties = OpenpanelProperties.normalize(args["properties"] as? [String: Any] ?? [:])
 
         let payload = IdentifyPayload(
             profileId: profileId,
@@ -121,7 +135,7 @@ public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
             lastName: lastName,
             email: email,
             avatar: avatar,
-            properties: properties?.mapValues { AnyCodable($0) }
+            properties: properties.mapValues { AnyCodable($0) }
         )
 
         OpenPanel.identify(payload: payload)
@@ -173,7 +187,7 @@ public class OpenpanelFlutterPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        OpenPanel.setGlobalProperties(properties)
+        OpenPanel.setGlobalProperties(OpenpanelProperties.normalize(properties))
         result(nil)
     }
 

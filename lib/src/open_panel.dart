@@ -40,7 +40,9 @@ class Openpanel {
 
   factory Openpanel() => instance;
 
-  Openpanel._internal();
+  Openpanel._internal()
+    : _backend = MethodChannelOpenpanelBackend(),
+      _providedPreferencesService = null;
 
   /// Creates an isolated instance for tests.
   @visibleForTesting
@@ -50,16 +52,20 @@ class Openpanel {
     OpenpanelOptions? options,
     OpenpanelState state = const OpenpanelState(profileId: 'test-profile'),
     bool isInitialised = true,
-  })  : _backend = backend,
-        _preferencesService = preferencesService,
-        _state = state,
-        _isClientInitialised = isInitialised {
-    this.options = options ?? OpenpanelOptions(clientId: 'test-client-id');
+  }) : _backend = backend,
+       _providedPreferencesService = preferencesService,
+       _state = state,
+       _isClientInitialised = isInitialised {
+    if (isInitialised) {
+      this.options = options ?? OpenpanelOptions(clientId: 'test-client-id');
+      _preferencesService = preferencesService;
+    }
   }
 
   late final OpenpanelOptions options;
+  final PreferencesService? _providedPreferencesService;
   late final PreferencesService _preferencesService;
-  late OpenpanelBackend _backend;
+  final OpenpanelBackend _backend;
 
   bool _isClientInitialised = false;
 
@@ -89,6 +95,7 @@ class Openpanel {
     WidgetsFlutterBinding.ensureInitialized();
 
     _preferencesService =
+        _providedPreferencesService ??
         PreferencesService(await SharedPreferences.getInstance());
 
     final savedState = await _preferencesService.getSavedState();
@@ -102,13 +109,12 @@ class Openpanel {
 
       _state = OpenpanelState(
         profileId: const Uuid().v4(),
+        properties: _state.properties,
         isCollectionEnabled: !options.disabled,
         isTracingSampled: sampled,
       );
       await _preferencesService.persistState(_state);
     }
-
-    _backend = MethodChannelOpenpanelBackend();
 
     // The native SDKs are the only transport. On unsupported platforms the
     // method channel is unavailable and there is no Dart fallback.
@@ -138,10 +144,10 @@ class Openpanel {
     if (_state.properties.isNotEmpty) {
       await _backend.setGlobalProperties(_state.properties);
     }
-    if (_state.profileId != null) {
+    if (_currentProfileId != null) {
       // The native SDKs ignore events while they are disabled, but they still
       // keep the profile id in memory.
-      await _backend.setProfileId(_state.profileId!);
+      await _backend.setProfileId(_currentProfileId!);
     }
 
     _isClientInitialised = true;
@@ -158,14 +164,7 @@ class Openpanel {
     _state = _state.copyWith(isCollectionEnabled: enabled);
 
     final nativeEnabled = enabled && _state.isTracingSampled;
-    unawaited(_runSafely(() async {
-      await _backend.setCollectionEnabled(nativeEnabled);
-
-      // Restore the profile id if collection was disabled during initialize.
-      if (nativeEnabled && _state.profileId != null) {
-        await _backend.setProfileId(_state.profileId!);
-      }
-    }));
+    unawaited(_runSafely(() => _backend.setCollectionEnabled(nativeEnabled)));
   }
 
   /// Sets the current profile id.
@@ -174,7 +173,7 @@ class Openpanel {
   /// to associate events with your own user id.
   void setProfileId(String profileId) {
     _ensureInitialised();
-    _state = _state.copyWith(profileId: profileId);
+    _state = _state.copyWith(profileId: profileId, isProfileIdentified: true);
 
     unawaited(_runSafely(() => _backend.setProfileId(profileId)));
   }
@@ -213,20 +212,22 @@ class Openpanel {
     Map<String, dynamic> properties = const {},
   }) {
     _ensureInitialised();
-    _state = _state.copyWith(profileId: profileId);
+    _state = _state.copyWith(profileId: profileId, isProfileIdentified: true);
 
-    unawaited(_runSafely(
-      () => _backend.identify(
-        UpdateProfilePayload(
-          profileId: profileId,
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          avatar: avatar,
-          properties: properties,
+    unawaited(
+      _runSafely(
+        () => _backend.identify(
+          UpdateProfilePayload(
+            profileId: profileId,
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            avatar: avatar,
+            properties: properties,
+          ),
         ),
       ),
-    ));
+    );
   }
 
   /// Increments a numeric profile property.
@@ -236,7 +237,7 @@ class Openpanel {
     OpenpanelEventOptions? eventOptions,
   }) {
     _execute(() {
-      final profileId = eventOptions?.profileId ?? _state.profileId;
+      final profileId = eventOptions?.profileId ?? _currentProfileId;
       if (profileId != null) {
         return _backend.increment(
           profileId: profileId,
@@ -254,7 +255,7 @@ class Openpanel {
     OpenpanelEventOptions? eventOptions,
   }) {
     _execute(() {
-      final profileId = eventOptions?.profileId ?? _state.profileId;
+      final profileId = eventOptions?.profileId ?? _currentProfileId;
       if (profileId != null) {
         return _backend.decrement(
           profileId: profileId,
@@ -266,10 +267,7 @@ class Openpanel {
   }
 
   /// Creates an alias for a profile.
-  void alias({
-    required String profileId,
-    required String alias,
-  }) {
+  void alias({required String profileId, required String alias}) {
     _execute(() => _backend.alias(profileId: profileId, alias: alias));
   }
 
@@ -303,9 +301,10 @@ class Openpanel {
   }) {
     _execute(() {
       final propertyProfileId = properties['profileId'];
-      final resolvedProfileId = profileId ??
+      final resolvedProfileId =
+          profileId ??
           (propertyProfileId is String ? propertyProfileId : null) ??
-          _state.profileId;
+          _currentProfileId;
 
       final eventProperties = Map<String, dynamic>.of(properties)
         ..remove('profileId');
@@ -320,10 +319,7 @@ class Openpanel {
 
   /// Sets global properties that are sent with every event.
   void setGlobalProperties(Map<String, dynamic> properties) {
-    _state = _state.copyWith(properties: {
-      ..._state.properties,
-      ...properties,
-    });
+    _state = _state.copyWith(properties: {..._state.properties, ...properties});
 
     if (_isClientInitialised) {
       unawaited(_runSafely(() => _backend.setGlobalProperties(properties)));
@@ -357,6 +353,13 @@ class Openpanel {
   void ready() {
     _execute(() => _backend.ready());
   }
+
+  // Do not give the native SDK an anonymous UUID while it is waiting for an
+  // explicit identification. Queued events must inherit the eventual user id.
+  String? get _currentProfileId =>
+      options.waitForProfile && !_state.isProfileIdentified
+      ? null
+      : _state.profileId;
 
   void _execute(FutureOr<void> Function() action) {
     _ensureInitialised();

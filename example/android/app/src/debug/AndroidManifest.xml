@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Native integration tests use an HTTP server on the device loopback. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

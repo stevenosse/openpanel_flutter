@@ -1,5 +1,9 @@
 import 'package:equatable/equatable.dart';
 
+/// Profile information sent to OpenPanel when identifying a user.
+///
+/// Prefer `Openpanel.identify` for new code. This class is kept for backwards
+/// compatibility with `Openpanel.updateProfile`.
 class UpdateProfilePayload extends Equatable {
   final String profileId;
   final String? firstName;
@@ -19,12 +23,13 @@ class UpdateProfilePayload extends Equatable {
 
   factory UpdateProfilePayload.fromJson(Map<String, dynamic> json) {
     return UpdateProfilePayload(
-      profileId: json['profileId'],
-      firstName: json['firstName'],
-      lastName: json['lastName'],
-      avatar: json['avatar'],
-      email: json['email'],
-      properties: json['properties'],
+      profileId: json['profileId'] as String,
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
+      avatar: json['avatar'] as String?,
+      email: json['email'] as String?,
+      properties: (json['properties'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{},
     );
   }
 

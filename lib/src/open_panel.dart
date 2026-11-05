@@ -1,270 +1,418 @@
+// ignore_for_file: prefer_initializing_formals
+
+import 'dart:async';
 import 'dart:math';
 
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:logger/web.dart';
+import 'package:flutter/services.dart' show MissingPluginException;
+import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:openpanel_flutter/src/models/open_panel_event_options.dart';
 import 'package:openpanel_flutter/src/models/open_panel_options.dart';
 import 'package:openpanel_flutter/src/models/open_panel_state.dart';
-import 'package:openpanel_flutter/src/models/post_event_payload.dart';
 import 'package:openpanel_flutter/src/models/update_profile_payload.dart';
 import 'package:openpanel_flutter/src/observers/referrer_observer.dart';
-import 'package:openpanel_flutter/src/services/openpanel_http_client.dart';
+import 'package:openpanel_flutter/src/services/method_channel_openpanel_backend.dart';
+import 'package:openpanel_flutter/src/services/openpanel_backend.dart';
 import 'package:openpanel_flutter/src/services/preferences_service.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
+/// OpenPanel analytics for Flutter.
+///
+/// This package is a wrapper around the official OpenPanel Kotlin and Swift
+/// SDKs. Android events are sent by the Kotlin SDK and iOS events are sent by
+/// the Swift SDK.
+///
+/// Example:
+/// ```dart
+/// await Openpanel.instance.initialize(
+///   options: OpenpanelOptions(clientId: '<YOUR_CLIENT_ID>'),
+/// );
+///
+/// Openpanel.instance.track(
+///   name: 'button_clicked',
+///   properties: {'button_id': 'submit_form'},
+/// );
+/// ```
 class Openpanel {
-  /// Openpanel instance
-  ///
-  /// Example:
-  /// ```dart
-  /// Openpanel.instance.event(name: 'screen_view', properties: {
-  ///   'my_event': eventName,
-  ///})
-  ///```
+  /// The shared OpenPanel instance.
   static final Openpanel instance = Openpanel._internal();
 
   factory Openpanel() => instance;
 
-  Openpanel._internal();
+  Openpanel._internal()
+    : _backend = MethodChannelOpenpanelBackend(),
+      _providedPreferencesService = null;
 
-  final Logger _logger = Logger();
+  /// Creates an isolated instance for tests.
+  @visibleForTesting
+  Openpanel.forTesting({
+    required OpenpanelBackend backend,
+    required PreferencesService preferencesService,
+    OpenpanelOptions? options,
+    OpenpanelState state = const OpenpanelState(profileId: 'test-profile'),
+    bool isInitialised = true,
+  }) : _backend = backend,
+       _providedPreferencesService = preferencesService,
+       _state = state,
+       _isClientInitialised = isInitialised {
+    if (isInitialised) {
+      this.options = options ?? OpenpanelOptions(clientId: 'test-client-id');
+      _preferencesService = preferencesService;
+    }
+  }
 
   late final OpenpanelOptions options;
+  final PreferencesService? _providedPreferencesService;
   late final PreferencesService _preferencesService;
-
-  late final OpenpanelHttpClient _httpClient;
+  final OpenpanelBackend _backend;
 
   bool _isClientInitialised = false;
 
+  /// Whether the OpenPanel client has been initialized.
+  bool get isInitialised => _isClientInitialised;
+
   OpenpanelState _state = const OpenpanelState();
 
-  /// Initialise Openpanel.
-  /// This must be called before using Openpanel.
+  /// Initializes OpenPanel.
   ///
-  ///  - [options]
-  ///    - [url] - Openpanel url
-  ///    - [clientId] - Openpanel client id
-  ///    - [clientSecret] - Openpanel client secret
-  ///    - [verbose] - Enable verbose logging
+  /// This must be called before using the SDK.
   ///
-  /// Example:
   /// ```dart
-  /// Openpanel.instance.initialize(
+  /// await Openpanel.instance.initialize(
   ///   options: OpenpanelOptions(
-  ///     url: <YOUR_OPENPANEL_URL>, // optional
-  ///     clientId: <YOUR_CLIENT_ID>,
-  ///     clientSecret: <YOUR_CLIENT_SECRET>,
-  ///     verbose: true, // optional, defaults to false
+  ///     clientId: '<YOUR_CLIENT_ID>',
+  ///     clientSecret: '<YOUR_CLIENT_SECRET>',
   ///   ),
-  ///)
-  ///```
+  /// );
+  /// ```
   Future<void> initialize({required OpenpanelOptions options}) async {
     if (_isClientInitialised) {
       return;
     }
+
     this.options = options;
+    WidgetsFlutterBinding.ensureInitialized();
 
     _preferencesService =
+        _providedPreferencesService ??
         PreferencesService(await SharedPreferences.getInstance());
 
-    final OpenpanelState? savedState =
-        await _preferencesService.getSavedState();
+    final savedState = await _preferencesService.getSavedState();
     if (savedState != null) {
-      _state = savedState;
+      _state = options.disabled
+          ? savedState.copyWith(isCollectionEnabled: false)
+          : savedState;
     } else {
-      final deviceData = await _getTrackedDeviceData();
+      final rate = options.tracingSampleRate.clamp(0.0, 1.0);
+      final sampled = rate >= 1.0 || Random().nextDouble() < rate;
 
-      double rate = options.tracingSampleRate;
-      bool sampled = rate >= 1.0 || Random().nextDouble() < rate;
-
-      if (deviceData.isNotEmpty) {
-        setGlobalProperties(deviceData);
-        _state = _state.copyWith(
-          profileId: const Uuid().v4(),
-          deviceId: deviceData['deviceId'] ?? const Uuid().v4(),
-          isTracingSampled: sampled,
-        );
-      } else {
-        _state = _state.copyWith(isTracingSampled: sampled);
-      }
-
-      _preferencesService.persistState(_state);
+      _state = OpenpanelState(
+        profileId: const Uuid().v4(),
+        properties: _state.properties,
+        isCollectionEnabled: !options.disabled,
+        isTracingSampled: sampled,
+      );
+      await _preferencesService.persistState(_state);
     }
-    // HTTP CLient
 
-    _httpClient = OpenpanelHttpClient(
-      verbose: options.verbose,
-      logger: _logger,
-    );
+    // The native SDKs are the only transport. On unsupported platforms the
+    // method channel is unavailable and there is no Dart fallback.
+    try {
+      await _backend.initialize(
+        options.copyWith(
+          disabled: !_state.isCollectionEnabled || !_state.isTracingSampled,
+        ),
+      );
+    } on MissingPluginException {
+      throw UnsupportedError(
+        'openpanel_flutter only supports Android and iOS. '
+        'The native OpenPanel SDK is not available on this platform.',
+      );
+    }
 
-    await _httpClient.init(options);
+    // Older versions of this package stored device data as global properties.
+    // The native SDKs collect this information themselves, so remove the old
+    // keys before restoring the persisted properties.
+    final filtered = Map<String, dynamic>.of(_state.properties)
+      ..removeWhere((key, _) => _legacyDevicePropertyKeys.contains(key));
+    if (filtered.length != _state.properties.length) {
+      _state = _state.copyWith(properties: filtered);
+      await _preferencesService.persistState(_state);
+    }
 
-    WidgetsBinding.instance.addObserver(ReferrerObserver());
+    if (_state.properties.isNotEmpty) {
+      await _backend.setGlobalProperties(_state.properties);
+    }
+    if (_currentProfileId != null) {
+      // The native SDKs ignore events while they are disabled, but they still
+      // keep the profile id in memory.
+      await _backend.setProfileId(_currentProfileId!);
+    }
 
     _isClientInitialised = true;
+
+    WidgetsBinding.instance.addObserver(ReferrerObserver());
   }
 
-  /// Enable or disable collection. Enabled by default.
-  void setCollectionEnabled(bool enabled) =>
-      _state = _state.copyWith(isCollectionEnabled: enabled);
-
-  /// Set profile id
+  /// Enables or disables event collection.
   ///
-  /// Profile ids are automatically generated if not set and never change unless you
-  /// call [clear] to reset them, use this method or reinstall the app.
-  void setProfileId(String profileId) =>
-      _state = _state.copyWith(profileId: profileId);
+  /// Collection is enabled by default. This only affects events sent through
+  /// this SDK; it can be changed at runtime.
+  void setCollectionEnabled(bool enabled) {
+    _ensureInitialised();
+    _state = _state.copyWith(isCollectionEnabled: enabled);
 
-  /// Update profile
+    final nativeEnabled = enabled && _state.isTracingSampled;
+    unawaited(_runSafely(() => _backend.setCollectionEnabled(nativeEnabled)));
+  }
+
+  /// Sets the current profile id.
   ///
-  /// Update an existing profile to add additional infos
+  /// Profile ids are automatically generated on first launch. Use this method
+  /// to associate events with your own user id.
+  void setProfileId(String profileId) {
+    _ensureInitialised();
+    _state = _state.copyWith(profileId: profileId, isProfileIdentified: true);
+
+    unawaited(_runSafely(() => _backend.setProfileId(profileId)));
+  }
+
+  /// Updates an existing profile.
+  ///
+  /// Prefer [identify] for new code.
   void updateProfile({required UpdateProfilePayload payload}) {
-    _execute(() {
-      setProfileId(payload.profileId);
-      _httpClient.updateProfile(
-        payload: payload,
-        stateProperties: _state.properties,
-      );
-    });
+    identify(
+      profileId: payload.profileId,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      email: payload.email,
+      avatar: payload.avatar,
+      properties: payload.properties,
+    );
   }
 
-  /// Increment a property.
+  /// Creates or updates a profile.
   ///
-  /// Ex. You may want to increment the amount of time a user opened the app
+  /// ```dart
+  /// Openpanel.instance.identify(
+  ///   profileId: 'user-123',
+  ///   firstName: 'John',
+  ///   lastName: 'Doe',
+  ///   email: 'john@example.com',
+  ///   properties: {'plan': 'premium'},
+  /// );
+  /// ```
+  void identify({
+    required String profileId,
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? avatar,
+    Map<String, dynamic> properties = const {},
+  }) {
+    _ensureInitialised();
+    _state = _state.copyWith(profileId: profileId, isProfileIdentified: true);
+
+    unawaited(
+      _runSafely(
+        () => _backend.identify(
+          UpdateProfilePayload(
+            profileId: profileId,
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            avatar: avatar,
+            properties: properties,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Increments a numeric profile property.
   void increment({
     required String property,
     required int value,
     OpenpanelEventOptions? eventOptions,
   }) {
     _execute(() {
-      final profileId = eventOptions?.profileId ?? _state.profileId;
-      if (profileId == null) {
-        return;
+      final profileId = eventOptions?.profileId ?? _currentProfileId;
+      if (profileId != null) {
+        return _backend.increment(
+          profileId: profileId,
+          property: property,
+          value: value,
+        );
       }
-
-      _httpClient.increment(
-        profileId: profileId,
-        property: property,
-        value: value,
-      );
     });
   }
 
-  /// Decrement property
-  ///
-  /// Ex. Decrease the number of credits the user has
+  /// Decrements a numeric profile property.
   void decrement({
     required String property,
     required int value,
     OpenpanelEventOptions? eventOptions,
   }) {
     _execute(() {
-      final profileId = eventOptions?.profileId ?? _state.profileId;
-      if (profileId == null) {
-        return;
+      final profileId = eventOptions?.profileId ?? _currentProfileId;
+      if (profileId != null) {
+        return _backend.decrement(
+          profileId: profileId,
+          property: property,
+          value: value,
+        );
       }
-
-      _httpClient.decrement(
-        profileId: profileId,
-        property: property,
-        value: value,
-      );
     });
   }
 
-  /// Send an event
+  /// Creates an alias for a profile.
+  void alias({required String profileId, required String alias}) {
+    _execute(() => _backend.alias(profileId: profileId, alias: alias));
+  }
+
+  /// Sends an event.
   ///
-  /// You can send events with any name and any properties. By default, the device
-  /// infos such as id, branch, model, etc... will be sent.
+  /// You can send events with any name and any properties. On Android and iOS
+  /// device information is added automatically by the native SDKs.
+  ///
+  /// Prefer [track] for new code. [event] is kept as a backwards-compatible
+  /// alias.
   void event({
     required String name,
     Map<String, dynamic> properties = const {},
+    String? profileId,
   }) {
-    _execute(() async {
-      final profileId = properties['profileId'] ?? _state.profileId;
+    track(name: name, properties: properties, profileId: profileId);
+  }
 
-      _httpClient.event(
-        payload: PostEventPayload(
-          name: name,
-          timestamp: DateTime.timestamp().toIso8601String(),
-          deviceId: _state.deviceId,
-          properties: {
-            ..._state.properties,
-            ...{...properties}..removeWhere((key, value) => key == 'profileId'),
-          },
-          profileId: profileId,
-        ),
+  /// Sends an event.
+  ///
+  /// ```dart
+  /// Openpanel.instance.track(
+  ///   name: 'button_clicked',
+  ///   properties: {'button_id': 'submit_form'},
+  /// );
+  /// ```
+  void track({
+    required String name,
+    Map<String, dynamic> properties = const {},
+    String? profileId,
+  }) {
+    _execute(() {
+      final propertyProfileId = properties['profileId'];
+      final resolvedProfileId =
+          profileId ??
+          (propertyProfileId is String ? propertyProfileId : null) ??
+          _currentProfileId;
+
+      final eventProperties = Map<String, dynamic>.of(properties)
+        ..remove('profileId');
+
+      return _backend.track(
+        name: name,
+        properties: eventProperties,
+        profileId: resolvedProfileId,
       );
     });
   }
 
-  /// Set global properties
-  /// These properties will be sent every time an event is sent
+  /// Sets global properties that are sent with every event.
   void setGlobalProperties(Map<String, dynamic> properties) {
-    _state = _state.copyWith(properties: {
-      ..._state.properties,
-      ...properties,
-    });
+    _state = _state.copyWith(properties: {..._state.properties, ...properties});
+
+    if (_isClientInitialised) {
+      unawaited(_runSafely(() => _backend.setGlobalProperties(properties)));
+    }
   }
 
-  /// Clear all properties
-  /// Use this method if you want to reset the global properties
+  /// Clears the current profile id and global properties.
+  ///
+  /// Collection settings and tracing sampling are preserved.
   Future<void> clear() async {
-    _state = const OpenpanelState();
+    _ensureInitialised();
+
+    _state = OpenpanelState(
+      isCollectionEnabled: _state.isCollectionEnabled,
+      isTracingSampled: _state.isTracingSampled,
+    );
+
+    await _backend.clear();
     await _preferencesService.persistState(_state);
   }
 
-  void _execute<T>(T Function() action) {
-    if (!_isClientInitialised) {
-      throw Exception(
-          'Openpanel is not initialised. You must initialize Openpanel before using Openpanel.instance.');
-    }
+  /// Flushes any queued events.
+  void flush() {
+    _execute(() => _backend.flush());
+  }
 
-    if (!_state.isCollectionEnabled) {
+  /// Flushes queued events and stops waiting for a profile.
+  ///
+  /// This is useful when [OpenpanelOptions.waitForProfile] is enabled and the
+  /// user is anonymous.
+  void ready() {
+    _execute(() => _backend.ready());
+  }
+
+  // Do not give the native SDK an anonymous UUID while it is waiting for an
+  // explicit identification. Queued events must inherit the eventual user id.
+  String? get _currentProfileId =>
+      options.waitForProfile && !_state.isProfileIdentified
+      ? null
+      : _state.profileId;
+
+  void _execute(FutureOr<void> Function() action) {
+    _ensureInitialised();
+
+    if (!_state.isCollectionEnabled || !_state.isTracingSampled) {
       return;
     }
 
-    if (!_state.isTracingSampled) return;
-
-    action();
-
-    _preferencesService.persistState(_state);
+    unawaited(_runSafely(action));
   }
 
-  Future<Map<String, dynamic>> _getTrackedDeviceData() async {
-    final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-
-    Map<String, dynamic> properties = {
-      'appVersion': packageInfo.version,
-      'buildNumber': packageInfo.buildNumber,
-      'installerStore': packageInfo.installerStore,
-    };
-
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      properties.addAll({
-        'deviceId': androidInfo.id,
-        'brand': androidInfo.brand,
-        'model': androidInfo.model,
-        'manufacturer': androidInfo.manufacturer,
-        'osVersion': androidInfo.version.release,
-      });
-    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      final IosDeviceInfo iosDeviceInfo = await deviceInfo.iosInfo;
-      properties.addAll({
-        'deviceId': iosDeviceInfo.identifierForVendor,
-        'brand': iosDeviceInfo.name,
-        'model': iosDeviceInfo.model,
-        'osVersion': iosDeviceInfo.systemVersion,
-      });
+  Future<void> _runSafely(FutureOr<void> Function() action) async {
+    try {
+      await action();
+    } catch (error, stackTrace) {
+      _log('OpenPanel error', error, stackTrace);
     }
 
-    return properties;
+    try {
+      await _preferencesService.persistState(_state);
+    } catch (error, stackTrace) {
+      _log('Unable to persist OpenPanel state', error, stackTrace);
+    }
   }
+
+  void _ensureInitialised() {
+    if (!_isClientInitialised) {
+      throw StateError(
+        'Openpanel is not initialised. You must initialize Openpanel before using Openpanel.instance.',
+      );
+    }
+  }
+
+  void _log(String message, [Object? error, StackTrace? stackTrace]) {
+    if (!options.verbose) {
+      return;
+    }
+
+    debugPrint('OpenPanel: $message${error == null ? '' : ' ($error)'}');
+    if (stackTrace != null) {
+      debugPrint(stackTrace.toString());
+    }
+  }
+
+  static const _legacyDevicePropertyKeys = <String>{
+    'appVersion',
+    'buildNumber',
+    'installerStore',
+    'deviceId',
+    'brand',
+    'model',
+    'manufacturer',
+    'osVersion',
+    'platform',
+  };
 }
